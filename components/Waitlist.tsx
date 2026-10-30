@@ -1,22 +1,25 @@
 import React, {useState} from "react";
 
+type WaitlistStatus = "idle" | "submitting" | "submitted" | "failed";
+
 export default function Waitlist() {
     const [email, setEmail] = useState<string>("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [status, setStatus] = useState<WaitlistStatus>("idle");
 
     const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        setIsSubmitted(false);
-        setIsSubmitting(true);
         e.preventDefault();
-        await fetch('https://28hours.org/email.php', {
-            method: 'POST',
-            body: new URLSearchParams({
-                'email': email,
-            }),
-        });
-        setIsSubmitting(false);
-        setIsSubmitted(true);
+        setStatus("submitting");
+        try {
+            const response = await fetch('https://28hours.org/email.php', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    'email': email,
+                }),
+            });
+            setStatus(response.ok ? "submitted" : "failed");
+        } catch {
+            setStatus("failed");
+        }
     }
 
     const onInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,8 +27,11 @@ export default function Waitlist() {
     }
 
     return <div className="flex-grow">
-        {isSubmitted && <p className="mb-2 -mt-10 sm:text-lg sm:leading-8 text-purple-200">
+        {status === "submitted" && <p className="mb-2 -mt-10 sm:text-lg sm:leading-8 text-purple-200">
             Thanks for joining the waitlist! <span className="whitespace-nowrap">I'll be in touch soon.</span>
+        </p>}
+        {status === "failed" && <p role="alert" className="mb-2 -mt-10 sm:text-lg sm:leading-8 text-red-munsell-200">
+            I couldn't add you to the waitlist. <span className="whitespace-nowrap">Please try again.</span>
         </p>}
         <form onSubmit={onSubmit} className="mx-auto sm:flex max-w-md gap-x-4">
             <label htmlFor="email-address" className="sr-only">
@@ -44,9 +50,10 @@ export default function Waitlist() {
             />
             <button
                 type="submit"
-                className="flex-none w-full sm:w-36 rounded-md bg-red-munsell-600 px-3.5 py-2.5 text-sm font-semibold text-red-munsell-50 shadow-sm hover:bg-red-munsell-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600"
+                disabled={status === "submitting"}
+                className="flex-none w-full sm:w-36 rounded-md bg-red-munsell-600 px-3.5 py-2.5 text-sm font-semibold text-red-munsell-50 shadow-sm hover:bg-red-munsell-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 disabled:opacity-75"
             >
-                {isSubmitting ? "Submitting..." : isSubmitted ? "Submitted!" : "Join the waitlist"}
+                {status === "submitting" ? "Submitting..." : status === "submitted" ? "Submitted!" : "Join the waitlist"}
             </button>
         </form>
     </div>
